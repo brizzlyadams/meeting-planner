@@ -51,12 +51,32 @@
   :root { color-scheme: light dark; }
   html, body {
     margin: 0; padding: 0;
+    height: 100%;
+    overflow: hidden;
     background: var(--bg);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     color: var(--text);
     -webkit-tap-highlight-color: transparent;
   }
-  #app { max-width: 480px; margin: 0 auto; padding-bottom: 84px; }
+  #app {
+    max-width: 480px;
+    margin: 0 auto;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+  #view-planner {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  #view-planner > :not(.gridwrap) { flex-shrink: 0; }
+  #view-groups {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
 
   header.top {
     background: var(--navy);
@@ -186,11 +206,12 @@
   }
 
   .gridwrap {
+    flex: 1 1 auto;
+    min-height: 0;
     margin: 14px 16px 0;
     border: 1.5px solid var(--grey-border);
     border-radius: 12px;
     overflow: auto;
-    max-height: 56dvh;
     overscroll-behavior: contain;
   }
   .tzgrid { display: grid; }
@@ -257,9 +278,10 @@
   }
 
   .legend {
+    flex-shrink: 0;
     display: flex;
     gap: 12px;
-    margin: 10px 16px 0;
+    margin: 8px 16px 10px;
     font-size: 11px;
     color: var(--grey-text);
   }
@@ -346,14 +368,10 @@
   }
 
   nav.bottom {
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    max-width: 480px;
-    margin: 0 auto;
+    flex-shrink: 0;
     display: flex;
     background: var(--bg);
     border-top: 1.5px solid var(--grey-border);
-    z-index: 20;
   }
   nav.bottom button {
     flex: 1;
