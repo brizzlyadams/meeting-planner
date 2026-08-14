@@ -300,6 +300,7 @@
   .saverow { display: flex; gap: 8px; margin-bottom: 14px; }
   .saverow input {
     flex: 1;
+    min-width: 0;
     padding: 10px 12px;
     border: 1.5px solid var(--grey-border);
     border-radius: 8px;
@@ -307,11 +308,12 @@
     font-family: inherit;
   }
   .saverow button {
+    flex-shrink: 0;
     background: var(--navy);
     color: var(--white);
     border: none;
     border-radius: 8px;
-    padding: 0 18px;
+    padding: 0 14px;
     font-size: 13.5px;
     font-weight: 700;
     font-family: inherit;
@@ -789,7 +791,7 @@ function renderPlanner() {
   } else if (saveOpen) {
     html += `
       <div class="saverow" style="margin:0;">
-        <input type="text" id="plannerGroupName" placeholder="Name this set (e.g. APAC team)">
+        <input type="text" id="plannerGroupName" placeholder="Group name">
         <button id="plannerSaveGroupBtn">Save</button>
         <button id="plannerSaveCancelBtn" style="background:var(--grey-bg);color:var(--grey-text);border:1.5px solid var(--grey-border);">Cancel</button>
       </div>`;
@@ -987,7 +989,7 @@ function renderGroups() {
   const el = document.getElementById('view-groups');
   let html = `<div class="viewpad"><h2>Saved groups</h2>
     <div class="saverow">
-      <input type="text" id="groupName" placeholder="Name this set (e.g. APAC team)">
+      <input type="text" id="groupName" placeholder="Group name">
       <button id="saveGroupBtn">Save</button>
     </div>
     <div class="savemsg" id="groupMsg"></div>`;
