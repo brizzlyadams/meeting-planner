@@ -270,7 +270,7 @@
   .cell.work { background: var(--work-bg); color: var(--work-text); }
   .cell.shoulder { background: var(--shoulder-bg); color: var(--shoulder-text); }
   .cell.night { background: var(--night-bg); color: var(--night-text); }
-  .cell .dtag { font-size: 9.5px; font-weight: 700; display: block; margin-top: 1px; opacity: 0.8; }
+  .cell .dtag { font-size: 9.5px; font-weight: 700; margin-left: 3px; opacity: 0.8; }
   .cell.selrow {
     outline: 2px solid var(--sel);
     outline-offset: -2px;
@@ -892,7 +892,7 @@ function renderPlanner() {
       const hf = localHourFrac(loc.z, utc);
       const cls = cellClass(hf);
       const key = localDateKey(loc.z, utc);
-      const dtag = key === refKey ? '' : `<span class="dtag">${weekday(loc.z, utc)}</span>`;
+      const dtag = key === refKey ? '' : `<span class="dtag">${weekday(loc.z, utc).slice(0, 2)}</span>`;
       const sel = selectedRow === ri ? ' selrow' : '';
       html += `<div class="cell ${cls}${sel}" data-row="${ri}">${fmtTime(loc.z, utc)}${dtag}</div>`;
     });
