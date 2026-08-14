@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Meetings">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Meeting Planner</title>
+<style>
+  :root {
+    --navy: #1F3864;
+    --navy-light: #2F5496;
+    --white: #FFFFFF;
+    --grey-text: #444444;
+    --grey-border: #D8DEE8;
+    --grey-bg: #F5F7FA;
+    --work-bg: #DFF0DF;
+    --work-text: #1E5B2E;
+    --shoulder-bg: #FBF0D8;
+    --shoulder-text: #7A5B12;
+    --night-bg: #EEF0F4;
+    --night-text: #8A93A6;
+    --sel: #1F3864;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--white);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #111;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #app { max-width: 480px; margin: 0 auto; padding-bottom: 84px; }
+
+  header.top {
+    background: var(--navy);
+    color: var(--white);
+    padding: 18px 20px 16px;
+    position: sticky; top: 0; z-index: 30;
+  }
+  header.top h1 {
+    margin: 0 0 2px;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+  }
+  header.top .sub {
+    font-size: 12.5px;
+    color: #C9D4E8;
+  }
+
+  .datebar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 14px 16px 0;
+  }
+  .datebar label { font-size: 13px; color: var(--grey-text); font-weight: 600; }
+  .datebar input[type="date"] {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1.5px solid var(--grey-border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #111;
+    background: var(--white);
+  }
+  .todaybtn {
+    border: 1.5px solid var(--grey-border);
+    background: var(--grey-bg);
+    color: var(--navy);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-family: inherit;
+  }
+
+  .addrow { margin: 12px 16px 0; position: relative; }
+  .addbtn {
+    width: 100%;
+    border: 1.5px dashed var(--navy-light);
+    background: var(--white);
+    color: var(--navy);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 11px 0;
+    border-radius: 10px;
+    font-family: inherit;
+  }
+  .searchbox {
+    border: 1.5px solid var(--navy-light);
+    border-radius: 10px;
+    background: var(--white);
+    overflow: hidden;
+  }
+  .searchbox input {
+    width: 100%;
+    border: none;
+    outline: none;
+    padding: 12px 12px;
+    font-size: 15px;
+    font-family: inherit;
+  }
+  .results {
+    max-height: 260px;
+    overflow-y: auto;
+    border-top: 1.5px solid var(--grey-border);
+  }
+  .results .rgroup {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #7A8296;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 8px 12px 4px;
+    background: var(--grey-bg);
+  }
+  .results .ritem {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    width: 100%;
+    border: none;
+    background: none;
+    text-align: left;
+    padding: 10px 12px;
+    font-family: inherit;
+    font-size: 14.5px;
+    color: #111;
+    border-bottom: 1px solid var(--grey-bg);
+  }
+  .ritem:active { background: var(--grey-bg); }
+  .ritem .rcity { font-weight: 600; }
+  .ritem .rmeta { font-size: 12px; color: #8A93A6; white-space: nowrap; }
+  .results .rempty { padding: 14px 12px; font-size: 13.5px; color: #8A93A6; }
+  .cancelsearch {
+    display: block;
+    width: 100%;
+    border: none;
+    border-top: 1.5px solid var(--grey-border);
+    background: var(--grey-bg);
+    color: var(--grey-text);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 10px 0;
+    font-family: inherit;
+  }
+
+  .gridwrap {
+    margin: 14px 16px 0;
+    border: 1.5px solid var(--grey-border);
+    border-radius: 12px;
+    overflow: auto;
+    max-height: 56dvh;
+    overscroll-behavior: contain;
+  }
+  .tzgrid { display: grid; min-width: max-content; }
+  .tzgrid .hcell {
+    position: sticky; top: 0; z-index: 5;
+    background: var(--navy);
+    color: var(--white);
+    padding: 8px 8px 7px;
+    min-width: 92px;
+    border-right: 1px solid #33507E;
+  }
+  .hcell .hcity {
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+  .hcell .hoff { font-size: 10.5px; color: #C9D4E8; margin-top: 1px; white-space: nowrap; }
+  .hcell .hbtns { display: flex; gap: 4px; margin-top: 5px; }
+  .hcell .hbtns button {
+    border: none;
+    background: #33507E;
+    color: var(--white);
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 5px;
+    padding: 2px 7px;
+    font-family: inherit;
+    line-height: 1.4;
+  }
+  .tzgrid .cell {
+    padding: 7px 8px;
+    font-size: 13px;
+    text-align: center;
+    border-right: 1px solid var(--grey-border);
+    border-bottom: 1px solid var(--grey-border);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+  .cell.work { background: var(--work-bg); color: var(--work-text); }
+  .cell.shoulder { background: var(--shoulder-bg); color: var(--shoulder-text); }
+  .cell.night { background: var(--night-bg); color: var(--night-text); }
+  .cell .dtag { font-size: 9.5px; font-weight: 700; display: block; margin-top: 1px; opacity: 0.8; }
+  .cell.selrow {
+    outline: 2px solid var(--sel);
+    outline-offset: -2px;
+    font-weight: 700;
+  }
+
+  .legend {
+    display: flex;
+    gap: 12px;
+    margin: 10px 16px 0;
+    font-size: 11px;
+    color: var(--grey-text);
+  }
+  .legend span::before {
+    content: '';
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 3px;
+    margin-right: 4px;
+    vertical-align: -1px;
+  }
+  .legend .lg-work::before { background: var(--work-bg); border: 1px solid #B4D6B4; }
+  .legend .lg-shoulder::before { background: var(--shoulder-bg); border: 1px solid #E6D3A0; }
+  .legend .lg-night::before { background: var(--night-bg); border: 1px solid var(--grey-border); }
+
+  .summary {
+    margin: 12px 16px 0;
+    border: 1.5px solid var(--navy-light);
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: var(--grey-bg);
+  }
+  .summary .stext { font-size: 13.5px; color: #111; line-height: 1.5; }
+  .copybtn {
+    width: 100%;
+    background: var(--navy);
+    color: var(--white);
+    border: none;
+    border-radius: 10px;
+    padding: 12px 0;
+    font-size: 14.5px;
+    font-weight: 700;
+    font-family: inherit;
+    margin-top: 10px;
+  }
+  .copybtn:active { background: var(--navy-light); }
+  .savemsg {
+    text-align: center;
+    color: var(--navy);
+    font-weight: 700;
+    font-size: 13px;
+    margin-top: 6px;
+    min-height: 17px;
+  }
+
+  .empty {
+    color: #8A93A6;
+    font-size: 14px;
+    text-align: center;
+    padding: 40px 20px;
+  }
+
+  .viewpad { padding: 14px 16px 20px; }
+  .viewpad h2 { font-size: 15px; color: var(--navy); margin: 6px 0 12px; }
+  .gcard {
+    border: 1.5px solid var(--grey-border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .gcard .gname { font-weight: 700; color: var(--navy); font-size: 14.5px; }
+  .gcard .gcities { font-size: 12.5px; color: var(--grey-text); margin: 4px 0 8px; }
+  .gcard .gbtns { display: flex; gap: 8px; }
+  .gcard .gbtns button {
+    border: 1.5px solid var(--grey-border);
+    background: var(--grey-bg);
+    color: var(--navy);
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 7px 14px;
+    border-radius: 8px;
+    font-family: inherit;
+  }
+  .gcard .gbtns button.gdel { color: #B23B3B; }
+  .saverow { display: flex; gap: 8px; margin-bottom: 14px; }
+  .saverow input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1.5px solid var(--grey-border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .saverow button {
+    background: var(--navy);
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    padding: 0 18px;
+    font-size: 13.5px;
+    font-weight: 700;
+    font-family: inherit;
+  }
+
+  nav.bottom {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    max-width: 480px;
+    margin: 0 auto;
+    display: flex;
+    background: var(--white);
+    border-top: 1.5px solid var(--grey-border);
+    z-index: 20;
+  }
+  nav.bottom button {
+    flex: 1;
+    padding: 12px 0 10px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #8A93A6;
+  }
+  nav.bottom button.active { color: var(--navy); }
+  nav.bottom button .dot {
+    display: block;
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--navy);
+    margin: 0 auto 5px;
+    opacity: 0;
+  }
+  nav.bottom button.active .dot { opacity: 1; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <h1>Meeting Planner</h1>
+    <div class="sub">Concurrent times across your locations</div>
+  </header>
+
+  <div id="view-planner"></div>
+  <div id="view-groups" style="display:none;"></div>
+
+  <nav class="bottom">
+    <button id="tab-planner" class="active"><span class="dot"></span>Planner</button>
+    <button id="tab-groups"><span class="dot"></span>Groups</button>
+  </nav>
+</div>
+
+<script>
+// ---------- City dataset: {c: city, k: country, z: IANA zone} ----------
+const CITIES = [
+  // Europe
+  {c:'London', k:'United Kingdom', z:'Europe/London'},
+  {c:'Edinburgh', k:'United Kingdom', z:'Europe/London'},
+  {c:'Manchester', k:'United Kingdom', z:'Europe/London'},
+  {c:'Dublin', k:'Ireland', z:'Europe/Dublin'},
+  {c:'Lisbon', k:'Portugal', z:'Europe/Lisbon'},
+  {c:'Madrid', k:'Spain', z:'Europe/Madrid'},
+  {c:'Barcelona', k:'Spain', z:'Europe/Madrid'},
+  {c:'Paris', k:'France', z:'Europe/Paris'},
+  {c:'Brussels', k:'Belgium', z:'Europe/Brussels'},
+  {c:'Amsterdam', k:'Netherlands', z:'Europe/Amsterdam'},
+  {c:'Berlin', k:'Germany', z:'Europe/Berlin'},
+  {c:'Munich', k:'Germany', z:'Europe/Berlin'},
+  {c:'Frankfurt', k:'Germany', z:'Europe/Berlin'},
+  {c:'Zurich', k:'Switzerland', z:'Europe/Zurich'},
+  {c:'Geneva', k:'Switzerland', z:'Europe/Zurich'},
+  {c:'Milan', k:'Italy', z:'Europe/Rome'},
+  {c:'Rome', k:'Italy', z:'Europe/Rome'},
+  {c:'Vienna', k:'Austria', z:'Europe/Vienna'},
+  {c:'Prague', k:'Czechia', z:'Europe/Prague'},
+  {c:'Warsaw', k:'Poland', z:'Europe/Warsaw'},
+  {c:'Budapest', k:'Hungary', z:'Europe/Budapest'},
+  {c:'Stockholm', k:'Sweden', z:'Europe/Stockholm'},
+  {c:'Oslo', k:'Norway', z:'Europe/Oslo'},
+  {c:'Copenhagen', k:'Denmark', z:'Europe/Copenhagen'},
+  {c:'Helsinki', k:'Finland', z:'Europe/Helsinki'},
+  {c:'Athens', k:'Greece', z:'Europe/Athens'},
+  {c:'Bucharest', k:'Romania', z:'Europe/Bucharest'},
+  {c:'Sofia', k:'Bulgaria', z:'Europe/Sofia'},
+  {c:'Belgrade', k:'Serbia', z:'Europe/Belgrade'},
+  {c:'Zagreb', k:'Croatia', z:'Europe/Belgrade'},
+  {c:'Ljubljana', k:'Slovenia', z:'Europe/Belgrade'},
+  {c:'Bratislava', k:'Slovakia', z:'Europe/Prague'},
+  {c:'Luxembourg', k:'Luxembourg', z:'Europe/Luxembourg'},
+  {c:'Valletta', k:'Malta', z:'Europe/Malta'},
+  {c:'Nicosia', k:'Cyprus', z:'Asia/Nicosia'},
+  {c:'Kyiv', k:'Ukraine', z:'Europe/Kyiv'},
+  {c:'Chisinau', k:'Moldova', z:'Europe/Chisinau'},
+  {c:'Minsk', k:'Belarus', z:'Europe/Minsk'},
+  {c:'Riga', k:'Latvia', z:'Europe/Riga'},
+  {c:'Vilnius', k:'Lithuania', z:'Europe/Vilnius'},
+  {c:'Tallinn', k:'Estonia', z:'Europe/Tallinn'},
+  {c:'Reykjavik', k:'Iceland', z:'Atlantic/Reykjavik'},
+  {c:'Moscow', k:'Russia', z:'Europe/Moscow'},
+  {c:'St Petersburg', k:'Russia', z:'Europe/Moscow'},
+  {c:'Yekaterinburg', k:'Russia', z:'Asia/Yekaterinburg'},
+  {c:'Novosibirsk', k:'Russia', z:'Asia/Novosibirsk'},
+  {c:'Vladivostok', k:'Russia', z:'Asia/Vladivostok'},
+  {c:'Istanbul', k:'Türkiye', z:'Europe/Istanbul'},
+  {c:'Ankara', k:'Türkiye', z:'Europe/Istanbul'},
+  // Middle East
+  {c:'Dubai', k:'UAE', z:'Asia/Dubai'},
+  {c:'Abu Dhabi', k:'UAE', z:'Asia/Dubai'},
+  {c:'Doha', k:'Qatar', z:'Asia/Qatar'},
+  {c:'Riyadh', k:'Saudi Arabia', z:'Asia/Riyadh'},
+  {c:'Jeddah', k:'Saudi Arabia', z:'Asia/Riyadh'},
+  {c:'Kuwait City', k:'Kuwait', z:'Asia/Kuwait'},
+  {c:'Manama', k:'Bahrain', z:'Asia/Bahrain'},
+  {c:'Muscat', k:'Oman', z:'Asia/Muscat'},
+  {c:'Tehran', k:'Iran', z:'Asia/Tehran'},
+  {c:'Baghdad', k:'Iraq', z:'Asia/Baghdad'},
+  {c:'Jerusalem', k:'Israel', z:'Asia/Jerusalem'},
+  {c:'Tel Aviv', k:'Israel', z:'Asia/Jerusalem'},
+  {c:'Amman', k:'Jordan', z:'Asia/Amman'},
+  {c:'Beirut', k:'Lebanon', z:'Asia/Beirut'},
+  {c:'Damascus', k:'Syria', z:'Asia/Damascus'},
+  // Africa
+  {c:'Cairo', k:'Egypt', z:'Africa/Cairo'},
+  {c:'Casablanca', k:'Morocco', z:'Africa/Casablanca'},
+  {c:'Algiers', k:'Algeria', z:'Africa/Algiers'},
+  {c:'Tunis', k:'Tunisia', z:'Africa/Tunis'},
+  {c:'Tripoli', k:'Libya', z:'Africa/Tripoli'},
+  {c:'Lagos', k:'Nigeria', z:'Africa/Lagos'},
+  {c:'Abuja', k:'Nigeria', z:'Africa/Lagos'},
+  {c:'Accra', k:'Ghana', z:'Africa/Accra'},
+  {c:'Dakar', k:'Senegal', z:'Africa/Dakar'},
+  {c:'Nairobi', k:'Kenya', z:'Africa/Nairobi'},
+  {c:'Addis Ababa', k:'Ethiopia', z:'Africa/Addis_Ababa'},
+  {c:'Kampala', k:'Uganda', z:'Africa/Kampala'},
+  {c:'Dar es Salaam', k:'Tanzania', z:'Africa/Dar_es_Salaam'},
+  {c:'Khartoum', k:'Sudan', z:'Africa/Khartoum'},
+  {c:'Kinshasa', k:'DR Congo', z:'Africa/Kinshasa'},
+  {c:'Luanda', k:'Angola', z:'Africa/Luanda'},
+  {c:'Johannesburg', k:'South Africa', z:'Africa/Johannesburg'},
+  {c:'Cape Town', k:'South Africa', z:'Africa/Johannesburg'},
+  {c:'Harare', k:'Zimbabwe', z:'Africa/Harare'},
+  {c:'Maputo', k:'Mozambique', z:'Africa/Maputo'},
+  // South & Central Asia
+  {c:'Mumbai', k:'India', z:'Asia/Kolkata'},
+  {c:'Delhi', k:'India', z:'Asia/Kolkata'},
+  {c:'Bengaluru', k:'India', z:'Asia/Kolkata'},
+  {c:'Bangalore', k:'India', z:'Asia/Kolkata'},
+  {c:'Chennai', k:'India', z:'Asia/Kolkata'},
+  {c:'Kolkata', k:'India', z:'Asia/Kolkata'},
+  {c:'Hyderabad', k:'India', z:'Asia/Kolkata'},
+  {c:'Pune', k:'India', z:'Asia/Kolkata'},
+  {c:'Ahmedabad', k:'India', z:'Asia/Kolkata'},
+  {c:'Karachi', k:'Pakistan', z:'Asia/Karachi'},
+  {c:'Lahore', k:'Pakistan', z:'Asia/Karachi'},
+  {c:'Islamabad', k:'Pakistan', z:'Asia/Karachi'},
+  {c:'Dhaka', k:'Bangladesh', z:'Asia/Dhaka'},
+  {c:'Colombo', k:'Sri Lanka', z:'Asia/Colombo'},
+  {c:'Kathmandu', k:'Nepal', z:'Asia/Kathmandu'},
+  {c:'Thimphu', k:'Bhutan', z:'Asia/Thimphu'},
+  {c:'Malé', k:'Maldives', z:'Indian/Maldives'},
+  {c:'Kabul', k:'Afghanistan', z:'Asia/Kabul'},
+  {c:'Tashkent', k:'Uzbekistan', z:'Asia/Tashkent'},
+  {c:'Almaty', k:'Kazakhstan', z:'Asia/Almaty'},
+  {c:'Astana', k:'Kazakhstan', z:'Asia/Almaty'},
+  {c:'Bishkek', k:'Kyrgyzstan', z:'Asia/Bishkek'},
+  {c:'Dushanbe', k:'Tajikistan', z:'Asia/Dushanbe'},
+  {c:'Ashgabat', k:'Turkmenistan', z:'Asia/Ashgabat'},
+  {c:'Baku', k:'Azerbaijan', z:'Asia/Baku'},
+  {c:'Tbilisi', k:'Georgia', z:'Asia/Tbilisi'},
+  {c:'Yerevan', k:'Armenia', z:'Asia/Yerevan'},
+  // East & Southeast Asia
+  {c:'Bangkok', k:'Thailand', z:'Asia/Bangkok'},
+  {c:'Hanoi', k:'Vietnam', z:'Asia/Ho_Chi_Minh'},
+  {c:'Ho Chi Minh City', k:'Vietnam', z:'Asia/Ho_Chi_Minh'},
+  {c:'Phnom Penh', k:'Cambodia', z:'Asia/Phnom_Penh'},
+  {c:'Vientiane', k:'Laos', z:'Asia/Vientiane'},
+  {c:'Yangon', k:'Myanmar', z:'Asia/Yangon'},
+  {c:'Singapore', k:'Singapore', z:'Asia/Singapore'},
+  {c:'Kuala Lumpur', k:'Malaysia', z:'Asia/Kuala_Lumpur'},
+  {c:'Jakarta', k:'Indonesia', z:'Asia/Jakarta'},
+  {c:'Denpasar (Bali)', k:'Indonesia', z:'Asia/Makassar'},
+  {c:'Manila', k:'Philippines', z:'Asia/Manila'},
+  {c:'Hong Kong', k:'Hong Kong', z:'Asia/Hong_Kong'},
+  {c:'Macau', k:'Macau', z:'Asia/Macau'},
+  {c:'Taipei', k:'Taiwan', z:'Asia/Taipei'},
+  {c:'Beijing', k:'China', z:'Asia/Shanghai'},
+  {c:'Shanghai', k:'China', z:'Asia/Shanghai'},
+  {c:'Shenzhen', k:'China', z:'Asia/Shanghai'},
+  {c:'Guangzhou', k:'China', z:'Asia/Shanghai'},
+  {c:'Chengdu', k:'China', z:'Asia/Shanghai'},
+  {c:'Seoul', k:'South Korea', z:'Asia/Seoul'},
+  {c:'Busan', k:'South Korea', z:'Asia/Seoul'},
+  {c:'Tokyo', k:'Japan', z:'Asia/Tokyo'},
+  {c:'Osaka', k:'Japan', z:'Asia/Tokyo'},
+  {c:'Ulaanbaatar', k:'Mongolia', z:'Asia/Ulaanbaatar'},
+  // Oceania & Pacific
+  {c:'Sydney', k:'Australia', z:'Australia/Sydney'},
+  {c:'Canberra', k:'Australia', z:'Australia/Sydney'},
+  {c:'Melbourne', k:'Australia', z:'Australia/Melbourne'},
+  {c:'Brisbane', k:'Australia', z:'Australia/Brisbane'},
+  {c:'Perth', k:'Australia', z:'Australia/Perth'},
+  {c:'Adelaide', k:'Australia', z:'Australia/Adelaide'},
+  {c:'Darwin', k:'Australia', z:'Australia/Darwin'},
+  {c:'Hobart', k:'Australia', z:'Australia/Hobart'},
+  {c:'Auckland', k:'New Zealand', z:'Pacific/Auckland'},
+  {c:'Wellington', k:'New Zealand', z:'Pacific/Auckland'},
+  {c:'Christchurch', k:'New Zealand', z:'Pacific/Auckland'},
+  {c:'Suva', k:'Fiji', z:'Pacific/Fiji'},
+  {c:'Port Moresby', k:'Papua New Guinea', z:'Pacific/Port_Moresby'},
+  {c:'Nouméa', k:'New Caledonia', z:'Pacific/Noumea'},
+  {c:'Honolulu', k:'USA', z:'Pacific/Honolulu'},
+  {c:'Guam', k:'Guam', z:'Pacific/Guam'},
+  // North America
+  {c:'New York', k:'USA', z:'America/New_York'},
+  {c:'Boston', k:'USA', z:'America/New_York'},
+  {c:'Washington DC', k:'USA', z:'America/New_York'},
+  {c:'Philadelphia', k:'USA', z:'America/New_York'},
+  {c:'Miami', k:'USA', z:'America/New_York'},
+  {c:'Atlanta', k:'USA', z:'America/New_York'},
+  {c:'Detroit', k:'USA', z:'America/Detroit'},
+  {c:'Chicago', k:'USA', z:'America/Chicago'},
+  {c:'Houston', k:'USA', z:'America/Chicago'},
+  {c:'Dallas', k:'USA', z:'America/Chicago'},
+  {c:'Austin', k:'USA', z:'America/Chicago'},
+  {c:'Minneapolis', k:'USA', z:'America/Chicago'},
+  {c:'New Orleans', k:'USA', z:'America/Chicago'},
+  {c:'Denver', k:'USA', z:'America/Denver'},
+  {c:'Salt Lake City', k:'USA', z:'America/Denver'},
+  {c:'Phoenix', k:'USA', z:'America/Phoenix'},
+  {c:'Los Angeles', k:'USA', z:'America/Los_Angeles'},
+  {c:'San Francisco', k:'USA', z:'America/Los_Angeles'},
+  {c:'Seattle', k:'USA', z:'America/Los_Angeles'},
+  {c:'Portland', k:'USA', z:'America/Los_Angeles'},
+  {c:'San Diego', k:'USA', z:'America/Los_Angeles'},
+  {c:'Las Vegas', k:'USA', z:'America/Los_Angeles'},
+  {c:'Anchorage', k:'USA', z:'America/Anchorage'},
+  {c:'Toronto', k:'Canada', z:'America/Toronto'},
+  {c:'Montreal', k:'Canada', z:'America/Toronto'},
+  {c:'Ottawa', k:'Canada', z:'America/Toronto'},
+  {c:'Winnipeg', k:'Canada', z:'America/Winnipeg'},
+  {c:'Calgary', k:'Canada', z:'America/Edmonton'},
+  {c:'Edmonton', k:'Canada', z:'America/Edmonton'},
+  {c:'Vancouver', k:'Canada', z:'America/Vancouver'},
+  {c:'Halifax', k:'Canada', z:'America/Halifax'},
+  {c:"St John's", k:'Canada', z:'America/St_Johns'},
+  {c:'Mexico City', k:'Mexico', z:'America/Mexico_City'},
+  {c:'Guadalajara', k:'Mexico', z:'America/Mexico_City'},
+  {c:'Monterrey', k:'Mexico', z:'America/Monterrey'},
+  {c:'Cancún', k:'Mexico', z:'America/Cancun'},
+  {c:'Tijuana', k:'Mexico', z:'America/Tijuana'},
+  // Central America & Caribbean
+  {c:'Guatemala City', k:'Guatemala', z:'America/Guatemala'},
+  {c:'San Salvador', k:'El Salvador', z:'America/El_Salvador'},
+  {c:'Tegucigalpa', k:'Honduras', z:'America/Tegucigalpa'},
+  {c:'Managua', k:'Nicaragua', z:'America/Managua'},
+  {c:'San José', k:'Costa Rica', z:'America/Costa_Rica'},
+  {c:'Panama City', k:'Panama', z:'America/Panama'},
+  {c:'Havana', k:'Cuba', z:'America/Havana'},
+  {c:'Kingston', k:'Jamaica', z:'America/Jamaica'},
+  {c:'San Juan', k:'Puerto Rico', z:'America/Puerto_Rico'},
+  {c:'Santo Domingo', k:'Dominican Republic', z:'America/Santo_Domingo'},
+  {c:'Port-au-Prince', k:'Haiti', z:'America/Port-au-Prince'},
+  {c:'Nassau', k:'Bahamas', z:'America/Nassau'},
+  {c:'Hamilton', k:'Bermuda', z:'Atlantic/Bermuda'},
+  // South America
+  {c:'São Paulo', k:'Brazil', z:'America/Sao_Paulo'},
+  {c:'Rio de Janeiro', k:'Brazil', z:'America/Sao_Paulo'},
+  {c:'Brasília', k:'Brazil', z:'America/Sao_Paulo'},
+  {c:'Manaus', k:'Brazil', z:'America/Manaus'},
+  {c:'Buenos Aires', k:'Argentina', z:'America/Argentina/Buenos_Aires'},
+  {c:'Santiago', k:'Chile', z:'America/Santiago'},
+  {c:'Lima', k:'Peru', z:'America/Lima'},
+  {c:'Bogotá', k:'Colombia', z:'America/Bogota'},
+  {c:'Quito', k:'Ecuador', z:'America/Guayaquil'},
+  {c:'Caracas', k:'Venezuela', z:'America/Caracas'},
+  {c:'Montevideo', k:'Uruguay', z:'America/Montevideo'},
+  {c:'Asunción', k:'Paraguay', z:'America/Asuncion'},
+  {c:'La Paz', k:'Bolivia', z:'America/La_Paz'},
+  {c:'Georgetown', k:'Guyana', z:'America/Guyana'},
+  {c:'Paramaribo', k:'Suriname', z:'America/Paramaribo'},
+];
+
+const COMMON = ['London','New York','Los Angeles','Chicago','Toronto','Paris','Berlin','Dubai','Mumbai','Singapore','Hong Kong','Tokyo','Sydney','Auckland','São Paulo'];
+
+// ---------- Timezone math (Intl-based, DST-correct, no libraries) ----------
+const HOUR = 3600 * 1000;
+const partsFmtCache = {};
+function partsFmt(zone) {
+  if (!partsFmtCache[zone]) {
+    partsFmtCache[zone] = new Intl.DateTimeFormat('en-US', {
+      timeZone: zone, hour12: false,
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+  }
+  return partsFmtCache[zone];
+}
+function zoneParts(zone, utcMs) {
+  const out = {};
+  partsFmt(zone).formatToParts(new Date(utcMs)).forEach(p => { if (p.type !== 'literal') out[p.type] = p.value; });
+  return out;
+}
+function zoneOffsetAt(zone, utcMs) {
+  const p = zoneParts(zone, utcMs);
+  const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second);
+  return asUtc - Math.floor(utcMs / 1000) * 1000;
+}
+// UTC instant of local wall-clock time y-m-d hh:mm in `zone` (two-pass offset correction)
+function zonedTimeToUtc(zone, y, m, d, hh, mm) {
+  const wall = Date.UTC(y, m - 1, d, hh, mm);
+  let guess = wall - zoneOffsetAt(zone, wall);
+  guess = wall - zoneOffsetAt(zone, guess);
+  return guess;
+}
+function fmtTime(zone, utcMs) {
+  const p = zoneParts(zone, utcMs);
+  return `${String(+p.hour % 24).padStart(2,'0')}:${p.minute}`;
+}
+function localHourFrac(zone, utcMs) {
+  const p = zoneParts(zone, utcMs);
+  return (+p.hour % 24) + (+p.minute) / 60;
+}
+function localDateKey(zone, utcMs) {
+  const p = zoneParts(zone, utcMs);
+  return `${p.year}-${p.month}-${p.day}`;
+}
+const wdayFmtCache = {};
+function weekday(zone, utcMs) {
+  if (!wdayFmtCache[zone]) wdayFmtCache[zone] = new Intl.DateTimeFormat('en-GB', { timeZone: zone, weekday: 'short' });
+  return wdayFmtCache[zone].format(new Date(utcMs));
+}
+function offsetLabel(zone, utcMs) {
+  const mins = Math.round(zoneOffsetAt(zone, utcMs) / 60000);
+  if (mins === 0) return 'UTC+0';
+  const sign = mins < 0 ? '−' : '+';
+  const a = Math.abs(mins);
+  const h = Math.floor(a / 60), m = a % 60;
+  return `UTC${sign}${h}${m ? ':' + String(m).padStart(2,'0') : ''}`;
+}
+
+// ---------- Search ----------
+function norm(s) {
+  return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+function searchCities(q) {
+  const nq = norm(q.trim());
+  if (!nq) return null; // caller shows the common + full list
+  const hits = CITIES.filter(x =>
+    norm(x.c).includes(nq) || norm(x.k).includes(nq) || norm(x.z.replace(/_/g,' ')).includes(nq)
+  );
+  // fall back to raw IANA zones not covered by the curated list
+  const seenZones = new Set(hits.map(h => h.z));
+  let ianaHits = [];
+  try {
+    ianaHits = Intl.supportedValuesOf('timeZone')
+      .filter(z => norm(z.replace(/_/g,' ')).includes(nq) && !seenZones.has(z))
+      .map(z => ({ c: z.split('/').pop().replace(/_/g,' '), k: z, z }));
+  } catch (e) { /* older browsers */ }
+  return [...hits, ...ianaHits].slice(0, 60);
+}
+
+// ---------- State & persistence ----------
+let locations = [];   // [{c, k, z}]
+let groups = {};      // {name: [{c, k, z}]}
+let dateStr = todayStr();
+let selectedRow = null;
+let searchOpen = false;
+let activeTab = 'planner';
+
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+function loadState() {
+  try {
+    const rawL = localStorage.getItem('mp_locations');
+    if (rawL) locations = JSON.parse(rawL);
+  } catch (e) { locations = []; }
+  try {
+    const rawG = localStorage.getItem('mp_groups');
+    if (rawG) groups = JSON.parse(rawG);
+  } catch (e) { groups = {}; }
+  if (!Array.isArray(locations)) locations = [];
+  if (!groups || typeof groups !== 'object') groups = {};
+  if (locations.length === 0) {
+    // seed with the user's own timezone
+    const myZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const match = CITIES.find(x => x.z === myZone);
+    locations = [match ? { ...match } : { c: myZone.split('/').pop().replace(/_/g,' '), k: myZone, z: myZone }];
+  }
+}
+function saveLocations() {
+  try { localStorage.setItem('mp_locations', JSON.stringify(locations)); }
+  catch (e) { console.error('Storage error', e); }
+}
+function saveGroups() {
+  try { localStorage.setItem('mp_groups', JSON.stringify(groups)); }
+  catch (e) { console.error('Storage error', e); }
+}
+
+// ---------- Planner view ----------
+function cellClass(hourFrac) {
+  if (hourFrac >= 8 && hourFrac < 18) return 'work';
+  if ((hourFrac >= 6 && hourFrac < 8) || (hourFrac >= 18 && hourFrac < 22)) return 'shoulder';
+  return 'night';
+}
+
+function rowUtcs() {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const refZone = locations[0].z;
+  const midnight = zonedTimeToUtc(refZone, y, m, d, 0, 0);
+  const rows = [];
+  for (let i = 0; i < 24; i++) rows.push(midnight + i * HOUR);
+  return rows;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function summaryText(utc) {
+  const refZone = locations[0].z;
+  const refKey = localDateKey(refZone, utc);
+  const dateFmt = new Intl.DateTimeFormat('en-GB', { timeZone: refZone, weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const parts = locations.map(loc => {
+    const t = fmtTime(loc.z, utc);
+    const key = localDateKey(loc.z, utc);
+    const tag = key === refKey ? '' : ` (${weekday(loc.z, utc)})`;
+    return `${t} ${loc.c}${tag}`;
+  });
+  return `${dateFmt.format(new Date(utc))} — ${parts.join(' / ')}`;
+}
+
+function renderPlanner() {
+  const el = document.getElementById('view-planner');
+  let html = `
+    <div class="datebar">
+      <label for="meetDate">Date</label>
+      <input type="date" id="meetDate" value="${dateStr}">
+      <button class="todaybtn" id="todayBtn">Today</button>
+    </div>
+    <div class="addrow" id="addrow">`;
+  if (searchOpen) {
+    html += `
+      <div class="searchbox">
+        <input type="text" id="citySearch" placeholder="Search city, country or timezone…" autocomplete="off">
+        <div class="results" id="cityResults"></div>
+        <button class="cancelsearch" id="cancelSearch">Cancel</button>
+      </div>`;
+  } else {
+    html += `<button class="addbtn" id="addLocBtn">+ Add location</button>`;
+  }
+  html += `</div>`;
+
+  if (locations.length === 0) {
+    html += `<div class="empty">No locations yet.<br>Add one to get started.</div>`;
+    el.innerHTML = html;
+    wirePlanner(el);
+    return;
+  }
+
+  const rows = rowUtcs();
+  const refZone = locations[0].z;
+  const refKey = localDateKey(refZone, rows[0]);
+  const noonUtc = rows[12];
+
+  html += `<div class="gridwrap"><div class="tzgrid" style="grid-template-columns: repeat(${locations.length}, minmax(92px, 1fr));">`;
+  locations.forEach((loc, li) => {
+    html += `
+      <div class="hcell">
+        <div class="hcity" title="${esc(loc.z)}">${esc(loc.c)}</div>
+        <div class="hoff">${offsetLabel(loc.z, noonUtc)}${li === 0 ? ' · ref' : ''}</div>
+        <div class="hbtns">
+          ${li > 0 ? `<button data-act="ref" data-i="${li}" title="Make reference">⇤</button>` : ''}
+          <button data-act="del" data-i="${li}" title="Remove">×</button>
+        </div>
+      </div>`;
+  });
+  rows.forEach((utc, ri) => {
+    locations.forEach(loc => {
+      const hf = localHourFrac(loc.z, utc);
+      const cls = cellClass(hf);
+      const key = localDateKey(loc.z, utc);
+      const dtag = key === refKey ? '' : `<span class="dtag">${weekday(loc.z, utc)}</span>`;
+      const sel = selectedRow === ri ? ' selrow' : '';
+      html += `<div class="cell ${cls}${sel}" data-row="${ri}">${fmtTime(loc.z, utc)}${dtag}</div>`;
+    });
+  });
+  html += `</div></div>
+    <div class="legend">
+      <span class="lg-work">Work 8–18</span>
+      <span class="lg-shoulder">Early / late</span>
+      <span class="lg-night">Night</span>
+    </div>`;
+
+  if (selectedRow !== null && selectedRow < rows.length) {
+    const text = summaryText(rows[selectedRow]);
+    html += `
+      <div class="summary">
+        <div class="stext" id="summaryText">${esc(text)}</div>
+        <button class="copybtn" id="copySummary">Copy</button>
+        <div class="savemsg" id="copyMsg"></div>
+      </div>`;
+  } else {
+    html += `<div class="savemsg" style="margin-top:10px;">Tap a row to pick a meeting time.</div>`;
+  }
+
+  el.innerHTML = html;
+  wirePlanner(el);
+}
+
+function wirePlanner(el) {
+  const dateInp = document.getElementById('meetDate');
+  if (dateInp) dateInp.oninput = (e) => {
+    if (!e.target.value) return;
+    dateStr = e.target.value;
+    renderPlanner();
+  };
+  const todayBtn = document.getElementById('todayBtn');
+  if (todayBtn) todayBtn.onclick = () => { dateStr = todayStr(); renderPlanner(); };
+
+  const addBtn = document.getElementById('addLocBtn');
+  if (addBtn) addBtn.onclick = () => {
+    searchOpen = true;
+    renderPlanner();
+    const s = document.getElementById('citySearch');
+    if (s) s.focus();
+  };
+
+  const cancel = document.getElementById('cancelSearch');
+  if (cancel) cancel.onclick = () => { searchOpen = false; renderPlanner(); };
+
+  const search = document.getElementById('citySearch');
+  if (search) {
+    renderResults('');
+    search.oninput = () => renderResults(search.value);
+  }
+
+  el.querySelectorAll('.hbtns button').forEach(btn => {
+    btn.onclick = (e) => {
+      e.stopPropagation();
+      const i = parseInt(btn.dataset.i, 10);
+      if (btn.dataset.act === 'del') {
+        locations.splice(i, 1);
+      } else if (btn.dataset.act === 'ref') {
+        const [loc] = locations.splice(i, 1);
+        locations.unshift(loc);
+      }
+      selectedRow = null;
+      saveLocations();
+      renderPlanner();
+    };
+  });
+
+  el.querySelectorAll('.cell').forEach(cell => {
+    cell.onclick = () => {
+      const ri = parseInt(cell.dataset.row, 10);
+      selectedRow = selectedRow === ri ? null : ri;
+      renderPlanner();
+    };
+  });
+
+  const copyBtn = document.getElementById('copySummary');
+  if (copyBtn) copyBtn.onclick = async () => {
+    const msgEl = document.getElementById('copyMsg');
+    const text = document.getElementById('summaryText').textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      msgEl.textContent = 'Copied!';
+    } catch (e) {
+      msgEl.textContent = 'Auto-copy blocked — select the text above and copy manually.';
+    }
+    setTimeout(() => { const m = document.getElementById('copyMsg'); if (m) m.textContent = ''; }, 3000);
+  };
+}
+
+function renderResults(q) {
+  const box = document.getElementById('cityResults');
+  if (!box) return;
+  const inList = new Set(locations.map(l => l.z + '|' + l.c));
+  let html = '';
+  const results = searchCities(q);
+  if (results === null) {
+    const common = COMMON.map(name => CITIES.find(x => x.c === name)).filter(Boolean);
+    html += `<div class="rgroup">Common</div>`;
+    html += common.map(itemHtml).join('');
+    html += `<div class="rgroup">All cities</div>`;
+    html += CITIES.map(itemHtml).join('');
+  } else if (results.length === 0) {
+    html = `<div class="rempty">No matches. Try a big city nearby, or an IANA zone name like "Asia/Kolkata".</div>`;
+  } else {
+    html = results.map(itemHtml).join('');
+  }
+  box.innerHTML = html;
+
+  function itemHtml(x) {
+    const added = inList.has(x.z + '|' + x.c);
+    return `<button class="ritem" data-z="${esc(x.z)}" data-c="${esc(x.c)}" data-k="${esc(x.k)}" ${added ? 'style="opacity:0.45;"' : ''}>
+      <span class="rcity">${esc(x.c)}${added ? ' ✓' : ''}</span>
+      <span class="rmeta">${esc(x.k)} · ${esc(x.z)}</span>
+    </button>`;
+  }
+
+  box.querySelectorAll('.ritem').forEach(btn => {
+    btn.onclick = () => {
+      locations.push({ c: btn.dataset.c, k: btn.dataset.k, z: btn.dataset.z });
+      searchOpen = false;
+      selectedRow = null;
+      saveLocations();
+      renderPlanner();
+    };
+  });
+}
+
+// ---------- Groups view ----------
+function renderGroups() {
+  const el = document.getElementById('view-groups');
+  let html = `<div class="viewpad"><h2>Saved groups</h2>
+    <div class="saverow">
+      <input type="text" id="groupName" placeholder="Name this set (e.g. APAC team)">
+      <button id="saveGroupBtn">Save</button>
+    </div>
+    <div class="savemsg" id="groupMsg"></div>`;
+  const names = Object.keys(groups).sort();
+  if (names.length === 0) {
+    html += `<div class="empty">No saved groups yet.<br>Set up locations in the Planner, then save them here under a name.</div>`;
+  } else {
+    names.forEach(name => {
+      const cities = groups[name].map(l => l.c).join(', ');
+      html += `
+        <div class="gcard">
+          <div class="gname">${esc(name)}</div>
+          <div class="gcities">${esc(cities)}</div>
+          <div class="gbtns">
+            <button data-act="load" data-name="${esc(name)}">Load</button>
+            <button class="gdel" data-act="del" data-name="${esc(name)}">Delete</button>
+          </div>
+        </div>`;
+    });
+  }
+  html += `</div>`;
+  el.innerHTML = html;
+
+  document.getElementById('saveGroupBtn').onclick = () => {
+    const inp = document.getElementById('groupName');
+    const msg = document.getElementById('groupMsg');
+    const name = inp.value.trim();
+    if (!name) { msg.textContent = 'Give the group a name first.'; return; }
+    if (locations.length === 0) { msg.textContent = 'Add some locations in the Planner first.'; return; }
+    groups[name] = locations.map(l => ({ ...l }));
+    saveGroups();
+    renderGroups();
+    document.getElementById('groupMsg').textContent = `Saved "${name}" (${locations.length} locations).`;
+  };
+
+  el.querySelectorAll('.gcard button').forEach(btn => {
+    btn.onclick = () => {
+      const name = btn.dataset.name;
+      if (btn.dataset.act === 'load') {
+        locations = groups[name].map(l => ({ ...l }));
+        selectedRow = null;
+        saveLocations();
+        showTab('planner');
+      } else {
+        if (!confirm(`Delete group "${name}"?`)) return;
+        delete groups[name];
+        saveGroups();
+        renderGroups();
+      }
+    };
+  });
+}
+
+// ---------- Tabs & init ----------
+function showTab(tab) {
+  activeTab = tab;
+  document.getElementById('view-planner').style.display = tab === 'planner' ? '' : 'none';
+  document.getElementById('view-groups').style.display = tab === 'groups' ? '' : 'none';
+  document.getElementById('tab-planner').classList.toggle('active', tab === 'planner');
+  document.getElementById('tab-groups').classList.toggle('active', tab === 'groups');
+  if (tab === 'planner') renderPlanner();
+  if (tab === 'groups') renderGroups();
+}
+document.getElementById('tab-planner').onclick = () => showTab('planner');
+document.getElementById('tab-groups').onclick = () => showTab('groups');
+
+loadState();
+showTab('planner');
+</script>
+</body>
+</html>
