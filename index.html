@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Meetings">
 <meta name="mobile-web-app-capable" content="yes">
+<meta name="color-scheme" content="light">
 <title>Meeting Planner</title>
 <style>
   :root {
@@ -25,6 +26,7 @@
     --sel: #1F3864;
   }
   * { box-sizing: border-box; }
+  :root { color-scheme: light; }
   html, body {
     margin: 0; padding: 0;
     background: var(--white);
@@ -79,14 +81,35 @@
     font-family: inherit;
   }
 
-  .grouptag {
+  .grouprow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
     margin: 10px 16px 0;
+  }
+  .grouptag {
     font-size: 13px;
     color: var(--navy);
     font-weight: 700;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .grouptag .glabel { color: #8A93A6; font-weight: 600; }
   .grouptag .gedited { color: #8A93A6; font-weight: 600; font-style: italic; }
+  .grpbtn {
+    flex-shrink: 0;
+    border: 1.5px solid var(--grey-border);
+    background: var(--grey-bg);
+    color: var(--navy);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-family: inherit;
+  }
 
   .addrow { margin: 12px 16px 0; position: relative; }
   .addbtn {
@@ -787,8 +810,26 @@ function renderPlanner() {
       <input type="date" id="meetDate" value="${dateStr}">
       <button class="todaybtn" id="todayBtn">Today</button>
     </div>`;
-  if (activeGroup) {
-    html += `<div class="grouptag"><span class="glabel">Group:</span> ${esc(activeGroup)}${groupEdited ? ' <span class="gedited">· edited</span>' : ''}</div>`;
+  if (locations.length > 0) {
+    if (saveOpen) {
+      html += `
+        <div class="saverow" style="margin:10px 16px 0;">
+          <input type="text" id="plannerGroupName" placeholder="Name this set (e.g. APAC team)">
+          <button id="plannerSaveGroupBtn">Save</button>
+          <button id="plannerSaveCancelBtn" style="background:var(--grey-bg);color:var(--grey-text);border:1.5px solid var(--grey-border);">Cancel</button>
+        </div>
+        <div class="savemsg" id="plannerGroupMsg"></div>`;
+    } else {
+      const tag = activeGroup
+        ? `<span class="glabel">Group:</span> ${esc(activeGroup)}${groupEdited ? ' <span class="gedited">· edited</span>' : ''}`
+        : `<span class="glabel">No group saved for these locations</span>`;
+      html += `
+        <div class="grouprow">
+          <div class="grouptag">${tag}</div>
+          <button class="grpbtn" id="saveAsGroupBtn">Save as group</button>
+        </div>
+        <div class="savemsg" id="plannerGroupMsg" style="min-height:0;"></div>`;
+    }
   }
   html += `
     <div class="addrow" id="addrow">`;
@@ -816,11 +857,23 @@ function renderPlanner() {
   const refKey = localDateKey(refZone, rows[0]);
   const noonUtc = rows[12];
 
+  if (selectedRow !== null && selectedRow < rows.length) {
+    const text = summaryText(rows[selectedRow]);
+    html += `
+      <div class="summary">
+        <div class="stext" id="summaryText">${esc(text)}</div>
+        <button class="copybtn" id="copySummary">Copy</button>
+        <div class="savemsg" id="copyMsg"></div>
+      </div>`;
+  } else {
+    html += `<div class="savemsg" style="margin-top:8px;">Tap a row to pick a meeting time.</div>`;
+  }
+
   const n = locations.length;
   const fits = n <= 6;
   const gridClass = fits ? `tzgrid c${n}` : 'tzgrid scrollmode';
   const colSpec = fits ? `repeat(${n}, minmax(0, 1fr))` : `repeat(${n}, minmax(84px, 1fr))`;
-  html += `<div class="gridwrap"><div class="${gridClass}" style="grid-template-columns: ${colSpec};">`;
+  html += `<div class="gridwrap" style="margin-top:8px;"><div class="${gridClass}" style="grid-template-columns: ${colSpec};">`;
   locations.forEach((loc, li) => {
     const off = offsetLabel(loc.z, noonUtc);
     const offShown = n >= 5 ? off.replace('UTC', '') : off;
@@ -850,34 +903,6 @@ function renderPlanner() {
       <span class="lg-shoulder">Early / late</span>
       <span class="lg-night">Night</span>
     </div>`;
-
-  if (selectedRow !== null && selectedRow < rows.length) {
-    const text = summaryText(rows[selectedRow]);
-    html += `
-      <div class="summary">
-        <div class="stext" id="summaryText">${esc(text)}</div>
-        <button class="copybtn" id="copySummary">Copy</button>
-        <div class="savemsg" id="copyMsg"></div>
-      </div>`;
-  } else {
-    html += `<div class="savemsg" style="margin-top:10px;">Tap a row to pick a meeting time.</div>`;
-  }
-
-  if (saveOpen) {
-    html += `
-      <div class="saverow" style="margin:10px 16px 0;">
-        <input type="text" id="plannerGroupName" placeholder="Name this set (e.g. APAC team)">
-        <button id="plannerSaveGroupBtn">Save</button>
-        <button id="plannerSaveCancelBtn" style="background:var(--grey-bg);color:var(--grey-text);border:1.5px solid var(--grey-border);">Cancel</button>
-      </div>
-      <div class="savemsg" id="plannerGroupMsg"></div>`;
-  } else {
-    html += `
-      <div style="margin:10px 16px 0;">
-        <button class="addbtn" id="saveAsGroupBtn" style="border-style:solid;">Save these locations as a group</button>
-      </div>
-      <div class="savemsg" id="plannerGroupMsg"></div>`;
-  }
 
   el.innerHTML = html;
   wirePlanner(el);
@@ -932,6 +957,8 @@ function wirePlanner(el) {
       const ri = parseInt(cell.dataset.row, 10);
       selectedRow = selectedRow === ri ? null : ri;
       renderPlanner();
+      const sum = document.getElementById('summaryText');
+      if (sum) sum.scrollIntoView({ block: 'nearest' });
     };
   });
 
