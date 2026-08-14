@@ -159,22 +159,24 @@
     max-height: 56dvh;
     overscroll-behavior: contain;
   }
-  .tzgrid { display: grid; min-width: max-content; }
+  .tzgrid { display: grid; }
+  .tzgrid.scrollmode { min-width: max-content; }
   .tzgrid .hcell {
     position: sticky; top: 0; z-index: 5;
     background: var(--navy);
     color: var(--white);
     padding: 8px 8px 7px;
-    min-width: 92px;
+    min-width: 0;
+    overflow: hidden;
     border-right: 1px solid #33507E;
   }
+  .tzgrid.scrollmode .hcell { min-width: 84px; }
   .hcell .hcity {
     font-size: 12.5px;
     font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 120px;
   }
   .hcell .hoff { font-size: 10.5px; color: #C9D4E8; margin-top: 1px; white-space: nowrap; }
   .hcell .hbtns { display: flex; gap: 4px; margin-top: 5px; }
@@ -190,14 +192,26 @@
     line-height: 1.4;
   }
   .tzgrid .cell {
-    padding: 7px 8px;
+    padding: 7px 4px;
     font-size: 13px;
     text-align: center;
     border-right: 1px solid var(--grey-border);
     border-bottom: 1px solid var(--grey-border);
     white-space: nowrap;
+    overflow: hidden;
     cursor: pointer;
   }
+  /* shrink tiers so up to 6 columns fit one screen wide */
+  .tzgrid.c5 .cell { font-size: 11.5px; padding: 6px 2px; }
+  .tzgrid.c6 .cell { font-size: 10.5px; padding: 6px 1px; }
+  .tzgrid.c5 .hcell, .tzgrid.c6 .hcell { padding: 7px 5px 6px; }
+  .tzgrid.c5 .hcity { font-size: 11px; }
+  .tzgrid.c6 .hcity { font-size: 10px; }
+  .tzgrid.c5 .hoff, .tzgrid.c6 .hoff { font-size: 9px; }
+  .tzgrid.c5 .hbtns button, .tzgrid.c6 .hbtns button { padding: 2px 5px; font-size: 10px; }
+  .tzgrid.c5 .hbtns, .tzgrid.c6 .hbtns { gap: 3px; }
+  .tzgrid.c5 .dtag { font-size: 8.5px; }
+  .tzgrid.c6 .dtag { font-size: 8px; }
   .cell.work { background: var(--work-bg); color: var(--work-text); }
   .cell.shoulder { background: var(--shoulder-bg); color: var(--shoulder-text); }
   .cell.night { background: var(--night-bg); color: var(--night-text); }
@@ -766,12 +780,18 @@ function renderPlanner() {
   const refKey = localDateKey(refZone, rows[0]);
   const noonUtc = rows[12];
 
-  html += `<div class="gridwrap"><div class="tzgrid" style="grid-template-columns: repeat(${locations.length}, minmax(92px, 1fr));">`;
+  const n = locations.length;
+  const fits = n <= 6;
+  const gridClass = fits ? `tzgrid c${n}` : 'tzgrid scrollmode';
+  const colSpec = fits ? `repeat(${n}, minmax(0, 1fr))` : `repeat(${n}, minmax(84px, 1fr))`;
+  html += `<div class="gridwrap"><div class="${gridClass}" style="grid-template-columns: ${colSpec};">`;
   locations.forEach((loc, li) => {
+    const off = offsetLabel(loc.z, noonUtc);
+    const offShown = n >= 5 ? off.replace('UTC', '') : off;
     html += `
       <div class="hcell">
         <div class="hcity" title="${esc(loc.z)}">${esc(loc.c)}</div>
-        <div class="hoff">${offsetLabel(loc.z, noonUtc)}${li === 0 ? ' · ref' : ''}</div>
+        <div class="hoff">${offShown}${li === 0 ? ' · ref' : ''}</div>
         <div class="hbtns">
           ${li > 0 ? `<button data-act="ref" data-i="${li}" title="Make reference">⇤</button>` : ''}
           <button data-act="del" data-i="${li}" title="Remove">×</button>
