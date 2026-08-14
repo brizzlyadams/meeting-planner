@@ -81,35 +81,17 @@
     font-family: inherit;
   }
 
-  .grouprow {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin: 10px 16px 0;
-  }
   .grouptag {
+    margin: 10px 16px 0;
     font-size: 13px;
     color: var(--navy);
     font-weight: 700;
-    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .grouptag .glabel { color: #8A93A6; font-weight: 600; }
   .grouptag .gedited { color: #8A93A6; font-weight: 600; font-style: italic; }
-  .grpbtn {
-    flex-shrink: 0;
-    border: 1.5px solid var(--grey-border);
-    background: var(--grey-bg);
-    color: var(--navy);
-    font-size: 12px;
-    font-weight: 700;
-    padding: 7px 12px;
-    border-radius: 8px;
-    font-family: inherit;
-  }
 
   .addrow { margin: 12px 16px 0; position: relative; }
   .addbtn {
@@ -281,19 +263,6 @@
     background: var(--grey-bg);
   }
   .summary .stext { font-size: 13.5px; color: #111; line-height: 1.5; }
-  .copybtn {
-    width: 100%;
-    background: var(--navy);
-    color: var(--white);
-    border: none;
-    border-radius: 10px;
-    padding: 12px 0;
-    font-size: 14.5px;
-    font-weight: 700;
-    font-family: inherit;
-    margin-top: 10px;
-  }
-  .copybtn:active { background: var(--navy-light); }
   .savemsg {
     text-align: center;
     color: var(--navy);
@@ -810,26 +779,8 @@ function renderPlanner() {
       <input type="date" id="meetDate" value="${dateStr}">
       <button class="todaybtn" id="todayBtn">Today</button>
     </div>`;
-  if (locations.length > 0) {
-    if (saveOpen) {
-      html += `
-        <div class="saverow" style="margin:10px 16px 0;">
-          <input type="text" id="plannerGroupName" placeholder="Name this set (e.g. APAC team)">
-          <button id="plannerSaveGroupBtn">Save</button>
-          <button id="plannerSaveCancelBtn" style="background:var(--grey-bg);color:var(--grey-text);border:1.5px solid var(--grey-border);">Cancel</button>
-        </div>
-        <div class="savemsg" id="plannerGroupMsg"></div>`;
-    } else {
-      const tag = activeGroup
-        ? `<span class="glabel">Group:</span> ${esc(activeGroup)}${groupEdited ? ' <span class="gedited">· edited</span>' : ''}`
-        : `<span class="glabel">No group saved for these locations</span>`;
-      html += `
-        <div class="grouprow">
-          <div class="grouptag">${tag}</div>
-          <button class="grpbtn" id="saveAsGroupBtn">Save as group</button>
-        </div>
-        <div class="savemsg" id="plannerGroupMsg" style="min-height:0;"></div>`;
-    }
+  if (activeGroup) {
+    html += `<div class="grouptag"><span class="glabel">Group:</span> ${esc(activeGroup)}${groupEdited ? ' <span class="gedited">· edited</span>' : ''}</div>`;
   }
   html += `
     <div class="addrow" id="addrow">`;
@@ -840,10 +791,20 @@ function renderPlanner() {
         <div class="results" id="cityResults"></div>
         <button class="cancelsearch" id="cancelSearch">Cancel</button>
       </div>`;
+  } else if (saveOpen) {
+    html += `
+      <div class="saverow" style="margin:0;">
+        <input type="text" id="plannerGroupName" placeholder="Name this set (e.g. APAC team)">
+        <button id="plannerSaveGroupBtn">Save</button>
+        <button id="plannerSaveCancelBtn" style="background:var(--grey-bg);color:var(--grey-text);border:1.5px solid var(--grey-border);">Cancel</button>
+      </div>`;
   } else {
-    html += `<button class="addbtn" id="addLocBtn">+ Add location</button>`;
+    html += `<div style="display:flex;gap:8px;">
+      <button class="addbtn" id="addLocBtn" style="flex:1.4;">+ Add location</button>
+      ${locations.length > 0 ? `<button class="addbtn" id="saveAsGroupBtn" style="flex:1;border-style:solid;">Save as group</button>` : ''}
+    </div>`;
   }
-  html += `</div>`;
+  html += `</div><div class="savemsg" id="plannerGroupMsg" style="min-height:0;"></div>`;
 
   if (locations.length === 0) {
     html += `<div class="empty">No locations yet.<br>Add one to get started.</div>`;
@@ -862,8 +823,6 @@ function renderPlanner() {
     html += `
       <div class="summary">
         <div class="stext" id="summaryText">${esc(text)}</div>
-        <button class="copybtn" id="copySummary">Copy</button>
-        <div class="savemsg" id="copyMsg"></div>
       </div>`;
   } else {
     html += `<div class="savemsg" style="margin-top:8px;">Tap a row to pick a meeting time.</div>`;
@@ -989,18 +948,6 @@ function wirePlanner(el) {
     setTimeout(() => { const m2 = document.getElementById('plannerGroupMsg'); if (m2) m2.textContent = ''; }, 3000);
   };
 
-  const copyBtn = document.getElementById('copySummary');
-  if (copyBtn) copyBtn.onclick = async () => {
-    const msgEl = document.getElementById('copyMsg');
-    const text = document.getElementById('summaryText').textContent;
-    try {
-      await navigator.clipboard.writeText(text);
-      msgEl.textContent = 'Copied!';
-    } catch (e) {
-      msgEl.textContent = 'Auto-copy blocked — select the text above and copy manually.';
-    }
-    setTimeout(() => { const m = document.getElementById('copyMsg'); if (m) m.textContent = ''; }, 3000);
-  };
 }
 
 function renderResults(q) {
