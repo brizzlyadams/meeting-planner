@@ -227,13 +227,14 @@
   }
   .tzgrid.scrollmode .hcell { min-width: 84px; }
   .hcell .hcity {
+    display: flex;
+    align-items: baseline;
     font-size: 12.5px;
     font-weight: 700;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
-  .hcell .hoff { font-size: 10.5px; color: #C9D4E8; margin-top: 1px; white-space: nowrap; }
+  .hcell .hname { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  .hcell .hoff { flex-shrink: 0; font-size: 10.5px; font-weight: 400; color: #C9D4E8; margin-left: 4px; }
   .hcell .hbtns { display: flex; gap: 4px; margin-top: 5px; }
   .hcell .hbtns button {
     border: none;
@@ -875,12 +876,10 @@ function renderPlanner() {
   const colSpec = fits ? `repeat(${n}, minmax(0, 1fr))` : `repeat(${n}, minmax(84px, 1fr))`;
   html += `<div class="gridwrap" style="margin-top:8px;"><div class="${gridClass}" style="grid-template-columns: ${colSpec};">`;
   locations.forEach((loc, li) => {
-    const off = offsetLabel(loc.z, noonUtc);
-    const offShown = n >= 5 ? off.replace('UTC', '') : off;
+    const off = offsetLabel(loc.z, noonUtc).replace('UTC', '');
     html += `
       <div class="hcell">
-        <div class="hcity" title="${esc(loc.z)}">${esc(loc.c)}</div>
-        <div class="hoff">${offShown}${li === 0 ? ' · ref' : ''}</div>
+        <div class="hcity" title="${esc(loc.z)}"><span class="hname">${esc(loc.c)}</span><span class="hoff">${off}</span></div>
         <div class="hbtns">
           ${li > 0 ? `<button data-act="ref" data-i="${li}" title="Make reference">⇤</button>` : ''}
           <button data-act="del" data-i="${li}" title="Remove">×</button>
