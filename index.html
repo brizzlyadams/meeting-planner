@@ -934,8 +934,8 @@ function wirePlanner(el) {
       const ri = parseInt(cell.dataset.row, 10);
       selectedRow = selectedRow === ri ? null : ri;
       renderPlanner();
-      const sum = document.getElementById('summaryText');
-      if (sum) sum.scrollIntoView({ block: 'nearest' });
+      const sel = document.querySelector('#view-planner .cell.selrow');
+      if (sel) sel.scrollIntoView({ block: 'nearest' });
     };
   });
 
