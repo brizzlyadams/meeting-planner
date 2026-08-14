@@ -79,6 +79,15 @@
     font-family: inherit;
   }
 
+  .grouptag {
+    margin: 10px 16px 0;
+    font-size: 13px;
+    color: var(--navy);
+    font-weight: 700;
+  }
+  .grouptag .glabel { color: #8A93A6; font-weight: 600; }
+  .grouptag .gedited { color: #8A93A6; font-weight: 600; font-style: italic; }
+
   .addrow { margin: 12px 16px 0; position: relative; }
   .addbtn {
     width: 100%;
@@ -684,6 +693,8 @@ let dateStr = todayStr();
 let selectedRow = null;
 let searchOpen = false;
 let saveOpen = false;
+let activeGroup = null;   // name of the group last loaded/saved, or null
+let groupEdited = false;  // locations changed since that group was loaded/saved
 let activeTab = 'planner';
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
@@ -699,6 +710,13 @@ function loadState() {
   } catch (e) { groups = {}; }
   if (!Array.isArray(locations)) locations = [];
   if (!groups || typeof groups !== 'object') groups = {};
+  try {
+    const rawA = localStorage.getItem('mp_active');
+    if (rawA) {
+      const a = JSON.parse(rawA);
+      if (a && a.name && groups[a.name]) { activeGroup = a.name; groupEdited = !!a.edited; }
+    }
+  } catch (e) { /* ignore */ }
   if (locations.length === 0) {
     // seed with the user's own timezone
     const myZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -713,6 +731,19 @@ function saveLocations() {
 function saveGroups() {
   try { localStorage.setItem('mp_groups', JSON.stringify(groups)); }
   catch (e) { console.error('Storage error', e); }
+}
+function saveActiveGroup() {
+  try { localStorage.setItem('mp_active', JSON.stringify({ name: activeGroup, edited: groupEdited })); }
+  catch (e) { console.error('Storage error', e); }
+}
+function setActiveGroup(name) {
+  activeGroup = name;
+  groupEdited = false;
+  saveActiveGroup();
+}
+function markLocationsChanged() {
+  if (activeGroup) { groupEdited = true; saveActiveGroup(); }
+  saveOpen = false;
 }
 
 // ---------- Planner view ----------
@@ -755,7 +786,11 @@ function renderPlanner() {
       <label for="meetDate">Date</label>
       <input type="date" id="meetDate" value="${dateStr}">
       <button class="todaybtn" id="todayBtn">Today</button>
-    </div>
+    </div>`;
+  if (activeGroup) {
+    html += `<div class="grouptag"><span class="glabel">Group:</span> ${esc(activeGroup)}${groupEdited ? ' <span class="gedited">· edited</span>' : ''}</div>`;
+  }
+  html += `
     <div class="addrow" id="addrow">`;
   if (searchOpen) {
     html += `
@@ -833,6 +868,7 @@ function renderPlanner() {
       <div class="saverow" style="margin:10px 16px 0;">
         <input type="text" id="plannerGroupName" placeholder="Name this set (e.g. APAC team)">
         <button id="plannerSaveGroupBtn">Save</button>
+        <button id="plannerSaveCancelBtn" style="background:var(--grey-bg);color:var(--grey-text);border:1.5px solid var(--grey-border);">Cancel</button>
       </div>
       <div class="savemsg" id="plannerGroupMsg"></div>`;
   } else {
@@ -885,6 +921,7 @@ function wirePlanner(el) {
         locations.unshift(loc);
       }
       selectedRow = null;
+      markLocationsChanged();
       saveLocations();
       renderPlanner();
     };
@@ -906,6 +943,9 @@ function wirePlanner(el) {
     if (inp) inp.focus();
   };
 
+  const plannerSaveCancel = document.getElementById('plannerSaveCancelBtn');
+  if (plannerSaveCancel) plannerSaveCancel.onclick = () => { saveOpen = false; renderPlanner(); };
+
   const plannerSaveBtn = document.getElementById('plannerSaveGroupBtn');
   if (plannerSaveBtn) plannerSaveBtn.onclick = () => {
     const inp = document.getElementById('plannerGroupName');
@@ -914,6 +954,7 @@ function wirePlanner(el) {
     if (!name) { msg.textContent = 'Give the group a name first.'; return; }
     groups[name] = locations.map(l => ({ ...l }));
     saveGroups();
+    setActiveGroup(name);
     saveOpen = false;
     renderPlanner();
     const m = document.getElementById('plannerGroupMsg');
@@ -967,6 +1008,7 @@ function renderResults(q) {
       locations.push({ c: btn.dataset.c, k: btn.dataset.k, z: btn.dataset.z });
       searchOpen = false;
       selectedRow = null;
+      markLocationsChanged();
       saveLocations();
       renderPlanner();
     };
@@ -1010,6 +1052,7 @@ function renderGroups() {
     if (locations.length === 0) { msg.textContent = 'Add some locations in the Planner first.'; return; }
     groups[name] = locations.map(l => ({ ...l }));
     saveGroups();
+    setActiveGroup(name);
     renderGroups();
     document.getElementById('groupMsg').textContent = `Saved "${name}" (${locations.length} locations).`;
   };
@@ -1020,12 +1063,14 @@ function renderGroups() {
       if (btn.dataset.act === 'load') {
         locations = groups[name].map(l => ({ ...l }));
         selectedRow = null;
+        setActiveGroup(name);
         saveLocations();
         showTab('planner');
       } else {
         if (!confirm(`Delete group "${name}"?`)) return;
         delete groups[name];
         saveGroups();
+        if (activeGroup === name) { activeGroup = null; groupEdited = false; saveActiveGroup(); }
         renderGroups();
       }
     };
