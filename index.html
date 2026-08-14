@@ -891,7 +891,7 @@ function renderPlanner() {
       const hf = localHourFrac(loc.z, utc);
       const cls = cellClass(hf);
       const key = localDateKey(loc.z, utc);
-      const dtag = key === refKey ? '' : `<span class="dtag">${weekday(loc.z, utc).slice(0, 2)}</span>`;
+      const dtag = key === refKey ? '' : `<span class="dtag">(${weekday(loc.z, utc).slice(0, 2).toUpperCase()})</span>`;
       const sel = selectedRow === ri ? ' selrow' : '';
       html += `<div class="cell ${cls}${sel}" data-row="${ri}">${fmtTime(loc.z, utc)}${dtag}</div>`;
     });
