@@ -683,6 +683,7 @@ let groups = {};      // {name: [{c, k, z}]}
 let dateStr = todayStr();
 let selectedRow = null;
 let searchOpen = false;
+let saveOpen = false;
 let activeTab = 'planner';
 
 function todayStr() { return new Date().toISOString().slice(0, 10); }
@@ -827,6 +828,21 @@ function renderPlanner() {
     html += `<div class="savemsg" style="margin-top:10px;">Tap a row to pick a meeting time.</div>`;
   }
 
+  if (saveOpen) {
+    html += `
+      <div class="saverow" style="margin:10px 16px 0;">
+        <input type="text" id="plannerGroupName" placeholder="Name this set (e.g. APAC team)">
+        <button id="plannerSaveGroupBtn">Save</button>
+      </div>
+      <div class="savemsg" id="plannerGroupMsg"></div>`;
+  } else {
+    html += `
+      <div style="margin:10px 16px 0;">
+        <button class="addbtn" id="saveAsGroupBtn" style="border-style:solid;">Save these locations as a group</button>
+      </div>
+      <div class="savemsg" id="plannerGroupMsg"></div>`;
+  }
+
   el.innerHTML = html;
   wirePlanner(el);
 }
@@ -881,6 +897,29 @@ function wirePlanner(el) {
       renderPlanner();
     };
   });
+
+  const saveAsBtn = document.getElementById('saveAsGroupBtn');
+  if (saveAsBtn) saveAsBtn.onclick = () => {
+    saveOpen = true;
+    renderPlanner();
+    const inp = document.getElementById('plannerGroupName');
+    if (inp) inp.focus();
+  };
+
+  const plannerSaveBtn = document.getElementById('plannerSaveGroupBtn');
+  if (plannerSaveBtn) plannerSaveBtn.onclick = () => {
+    const inp = document.getElementById('plannerGroupName');
+    const msg = document.getElementById('plannerGroupMsg');
+    const name = inp.value.trim();
+    if (!name) { msg.textContent = 'Give the group a name first.'; return; }
+    groups[name] = locations.map(l => ({ ...l }));
+    saveGroups();
+    saveOpen = false;
+    renderPlanner();
+    const m = document.getElementById('plannerGroupMsg');
+    if (m) m.textContent = `Saved "${name}" (${locations.length} location${locations.length === 1 ? '' : 's'}).`;
+    setTimeout(() => { const m2 = document.getElementById('plannerGroupMsg'); if (m2) m2.textContent = ''; }, 3000);
+  };
 
   const copyBtn = document.getElementById('copySummary');
   if (copyBtn) copyBtn.onclick = async () => {
