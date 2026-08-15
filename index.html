@@ -1136,6 +1136,26 @@ document.getElementById('tab-groups').onclick = () => showTab('groups');
 loadState();
 dateStr = todayStr();
 showTab('planner');
+
+// ---------- Self-update (home-screen app has no reload button) ----------
+// BUILD must be bumped on every deploy; the checker compares it against the live file.
+const BUILD = '2026-08-16-1';
+function checkUpdate() {
+  if (location.protocol === 'file:') return;
+  const last = +sessionStorage.getItem('mp_upd') || 0;
+  if (Date.now() - last < 60000) return; // reload at most once a minute
+  fetch(location.pathname + '?u=' + Date.now(), { cache: 'no-store' })
+    .then(r => r.ok ? r.text() : '')
+    .then(t => {
+      if (!t || t.includes("BUILD = '" + BUILD + "'")) return;
+      if (searchOpen || saveOpen || selectedRow !== null) return; // don't yank the page mid-use
+      sessionStorage.setItem('mp_upd', String(Date.now()));
+      location.replace(location.pathname + '?u=' + Date.now());
+    })
+    .catch(() => {});
+}
+checkUpdate();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
 </script>
 </body>
 </html>
