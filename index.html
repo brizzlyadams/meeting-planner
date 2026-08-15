@@ -130,6 +130,21 @@
   }
   .grouptag .glabel { color: var(--muted); font-weight: 600; }
   .grouptag .gedited { color: var(--muted); font-weight: 600; font-style: italic; }
+  .grouptag select {
+    appearance: none;
+    -webkit-appearance: none;
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    padding: 0;
+    max-width: 60vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .grouptag .gchev { color: var(--muted); font-size: 10px; margin-left: 2px; }
 
   .addrow { margin: 12px 16px 0; position: relative; }
   .addbtn {
@@ -804,8 +819,11 @@ function renderPlanner() {
       <input type="date" id="meetDate" value="${dateStr}">
       <button class="todaybtn" id="todayBtn">Today</button>
     </div>`;
-  if (activeGroup) {
-    html += `<div class="grouptag"><span class="glabel">Group:</span> ${esc(activeGroup)}${groupEdited ? ' <span class="gedited">· edited</span>' : ''}</div>`;
+  const groupNames = Object.keys(groups).sort();
+  if (groupNames.length > 0) {
+    const opts = groupNames.map(n =>
+      `<option value="${esc(n)}"${n === activeGroup ? ' selected' : ''}>${esc(n)}</option>`).join('');
+    html += `<div class="grouptag"><span class="glabel">Group:</span> <select id="groupSelect">${activeGroup ? '' : '<option value="" selected>–</option>'}${opts}</select><span class="gchev">▾</span>${groupEdited ? ' <span class="gedited">· edited</span>' : ''}</div>`;
   }
   html += `
     <div class="addrow" id="addrow">`;
@@ -894,6 +912,25 @@ function wirePlanner(el) {
   };
   const todayBtn = document.getElementById('todayBtn');
   if (todayBtn) todayBtn.onclick = () => { dateStr = todayStr(); renderPlanner(); };
+
+  const groupSel = document.getElementById('groupSelect');
+  if (groupSel) {
+    const tmp = document.createElement('span');
+    tmp.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-size:13px;font-weight:700;';
+    tmp.textContent = groupSel.selectedOptions[0] ? groupSel.selectedOptions[0].textContent : '';
+    document.body.appendChild(tmp);
+    groupSel.style.width = Math.min(tmp.offsetWidth + 6, window.innerWidth * 0.6) + 'px';
+    tmp.remove();
+  }
+  if (groupSel) groupSel.onchange = () => {
+    const name = groupSel.value;
+    if (!name || !groups[name]) return;
+    locations = groups[name].map(l => ({ ...l }));
+    selectedRow = null;
+    setActiveGroup(name);
+    saveLocations();
+    renderPlanner();
+  };
 
   const addBtn = document.getElementById('addLocBtn');
   if (addBtn) addBtn.onclick = () => {
