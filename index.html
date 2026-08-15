@@ -120,8 +120,10 @@
   }
 
   .grouptag {
+    position: relative;
     margin: 10px 16px 0;
-    font-size: 13px;
+    padding: 7px 0;
+    font-size: 14px;
     color: var(--accent);
     font-weight: 700;
     overflow: hidden;
@@ -130,21 +132,18 @@
   }
   .grouptag .glabel { color: var(--muted); font-weight: 600; }
   .grouptag .gedited { color: var(--muted); font-weight: 600; font-style: italic; }
+  .grouptag .gchev { color: var(--muted); font-size: 11px; margin-left: 3px; }
   .grouptag select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    border: none;
     appearance: none;
     -webkit-appearance: none;
-    border: none;
-    background: transparent;
-    color: var(--accent);
-    font-size: 13px;
-    font-weight: 700;
-    font-family: inherit;
-    padding: 0;
-    max-width: 60vw;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 16px;
   }
-  .grouptag .gchev { color: var(--muted); font-size: 10px; margin-left: 2px; }
 
   .addrow { margin: 12px 16px 0; position: relative; }
   .addbtn {
@@ -727,7 +726,10 @@ let activeGroup = null;   // name of the group last loaded/saved, or null
 let groupEdited = false;  // locations changed since that group was loaded/saved
 let activeTab = 'planner';
 
-function todayStr() { return new Date().toISOString().slice(0, 10); }
+function todayStr() {
+  const zone = locations.length ? locations[0].z : Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return localDateKey(zone, Date.now());
+}
 
 function loadState() {
   try {
@@ -823,7 +825,7 @@ function renderPlanner() {
   if (groupNames.length > 0) {
     const opts = groupNames.map(n =>
       `<option value="${esc(n)}"${n === activeGroup ? ' selected' : ''}>${esc(n)}</option>`).join('');
-    html += `<div class="grouptag"><span class="glabel">Group:</span> <select id="groupSelect">${activeGroup ? '' : '<option value="" selected>–</option>'}${opts}</select><span class="gchev">▾</span>${groupEdited ? ' <span class="gedited">· edited</span>' : ''}</div>`;
+    html += `<div class="grouptag"><span class="glabel">Group:</span> ${activeGroup ? esc(activeGroup) : '–'}<span class="gchev">▾</span>${groupEdited ? ' <span class="gedited">· edited</span>' : ''}<select id="groupSelect">${activeGroup ? '' : '<option value="" selected>–</option>'}${opts}</select></div>`;
   }
   html += `
     <div class="addrow" id="addrow">`;
@@ -914,18 +916,12 @@ function wirePlanner(el) {
   if (todayBtn) todayBtn.onclick = () => { dateStr = todayStr(); renderPlanner(); };
 
   const groupSel = document.getElementById('groupSelect');
-  if (groupSel) {
-    const tmp = document.createElement('span');
-    tmp.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-size:13px;font-weight:700;';
-    tmp.textContent = groupSel.selectedOptions[0] ? groupSel.selectedOptions[0].textContent : '';
-    document.body.appendChild(tmp);
-    groupSel.style.width = Math.min(tmp.offsetWidth + 6, window.innerWidth * 0.6) + 'px';
-    tmp.remove();
-  }
   if (groupSel) groupSel.onchange = () => {
     const name = groupSel.value;
     if (!name || !groups[name]) return;
+    const wasToday = dateStr === todayStr();
     locations = groups[name].map(l => ({ ...l }));
+    if (wasToday) dateStr = todayStr();
     selectedRow = null;
     setActiveGroup(name);
     saveLocations();
@@ -953,12 +949,14 @@ function wirePlanner(el) {
     btn.onclick = (e) => {
       e.stopPropagation();
       const i = parseInt(btn.dataset.i, 10);
+      const wasToday = dateStr === todayStr();
       if (btn.dataset.act === 'del') {
         locations.splice(i, 1);
       } else if (btn.dataset.act === 'ref') {
         const [loc] = locations.splice(i, 1);
         locations.unshift(loc);
       }
+      if (wasToday) dateStr = todayStr();
       selectedRow = null;
       markLocationsChanged();
       saveLocations();
@@ -1090,7 +1088,9 @@ function renderGroups() {
     btn.onclick = () => {
       const name = btn.dataset.name;
       if (btn.dataset.act === 'load') {
+        const wasToday = dateStr === todayStr();
         locations = groups[name].map(l => ({ ...l }));
+        if (wasToday) dateStr = todayStr();
         selectedRow = null;
         setActiveGroup(name);
         saveLocations();
@@ -1120,6 +1120,7 @@ document.getElementById('tab-planner').onclick = () => showTab('planner');
 document.getElementById('tab-groups').onclick = () => showTab('groups');
 
 loadState();
+dateStr = todayStr();
 showTab('planner');
 </script>
 </body>
