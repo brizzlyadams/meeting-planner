@@ -286,6 +286,7 @@
   .cell.shoulder { background: var(--shoulder-bg); color: var(--shoulder-text); }
   .cell.night { background: var(--night-bg); color: var(--night-text); }
   .cell .dtag { font-size: 9.5px; font-weight: 700; margin-left: 3px; opacity: 0.8; }
+  .cell.past { filter: brightness(0.72) saturate(0.35); }
   .cell.selrow {
     outline: 2px solid var(--sel);
     outline-offset: -2px;
@@ -725,6 +726,7 @@ let saveOpen = false;
 let activeGroup = null;   // name of the group last loaded/saved, or null
 let groupEdited = false;  // locations changed since that group was loaded/saved
 let activeTab = 'planner';
+let lastPastCount = -1;
 
 function todayStr() {
   const zone = locations.length ? locations[0].z : Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -888,14 +890,17 @@ function renderPlanner() {
         </div>
       </div>`;
   });
+  const nowMs = Date.now();
+  lastPastCount = rows.filter(u => u + HOUR <= nowMs).length;
   rows.forEach((utc, ri) => {
+    const past = utc + HOUR <= nowMs ? ' past' : '';
     locations.forEach(loc => {
       const hf = localHourFrac(loc.z, utc);
       const cls = cellClass(hf);
       const key = localDateKey(loc.z, utc);
       const dtag = key === refKey ? '' : `<span class="dtag">(${weekday(loc.z, utc).slice(0, 2).toUpperCase()})</span>`;
       const sel = selectedRow === ri ? ' selrow' : '';
-      html += `<div class="cell ${cls}${sel}" data-row="${ri}">${fmtTime(loc.z, utc)}${dtag}</div>`;
+      html += `<div class="cell ${cls}${sel}${past}" data-row="${ri}">${fmtTime(loc.z, utc)}${dtag}</div>`;
     });
   });
   html += `</div></div>`;
@@ -1139,7 +1144,7 @@ showTab('planner');
 
 // ---------- Self-update (home-screen app has no reload button) ----------
 // BUILD must be bumped on every deploy; the checker compares it against the live file.
-const BUILD = '2026-08-16-1';
+const BUILD = '2026-08-16-2';
 function checkUpdate() {
   if (location.protocol === 'file:') return;
   const last = +sessionStorage.getItem('mp_upd') || 0;
@@ -1155,7 +1160,18 @@ function checkUpdate() {
     .catch(() => {});
 }
 checkUpdate();
-document.addEventListener('visibilitychange', () => { if (!document.hidden) checkUpdate(); });
+
+// Re-shade past hours when the clock crosses a row boundary or the app is reopened.
+function refreshPast() {
+  if (activeTab !== 'planner' || searchOpen || saveOpen || !locations.length) return;
+  const now = Date.now();
+  if (rowUtcs().filter(u => u + HOUR <= now).length !== lastPastCount) renderPlanner();
+}
+setInterval(refreshPast, 60000);
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) { checkUpdate(); refreshPast(); }
+});
 </script>
 </body>
 </html>
