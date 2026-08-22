@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#3E9E63"/><stop offset="1" stop-color="#1E5B2E"/>
+  </linearGradient></defs>
+  <rect width="48" height="48" rx="10" fill="url(#g)"/>
+  <!-- A clock, not a globe: a globe's meridians turn to grey mush at 16px,
+       where a filled disc with two heavy hands still reads as a clock. -->
+  <circle cx="24" cy="24" r="14" fill="#fff"/>
+  <g stroke="#1E5B2E" stroke-width="3.6" stroke-linecap="round">
+    <line x1="24" y1="24" x2="24" y2="15"/>
+    <line x1="24" y1="24" x2="30.5" y2="27.5"/>
+  </g>
+</svg>
