@@ -1104,8 +1104,55 @@ function renderGroups() {
         </div>`;
     });
   }
+  html += `
+    <div class="gcard">
+      <div class="gname">Backup &amp; Restore</div>
+      <div class="gcities">Your locations and groups live only on this device. A Home Screen app keeps its own copy, and <b>deleting the icon deletes the data</b>.</div>
+      <button class="addbtn" id="downloadBackupBtn" style="margin-top:10px;width:100%;">Download backup file</button>
+      <button class="addbtn" id="copyBackupBtn" style="margin-top:6px;width:100%;border-style:solid;">Copy backup text</button>
+      <textarea id="backupOutput" readonly style="width:100%;margin-top:8px;height:70px;border:1.5px solid var(--grey-border);border-radius:8px;padding:8px;font-family:monospace;font-size:11px;box-sizing:border-box;">${backupText().replace(/</g, '&lt;')}</textarea>
+      <div class="savemsg" id="backupMsg"></div>
+      <div class="gcities" style="margin-top:12px;">Restore from a file:</div>
+      <input type="file" id="restoreFile" accept="application/json,.json" style="margin-top:6px;font-size:12px;">
+      <div class="gcities" style="margin-top:12px;">…or paste a backup:</div>
+      <textarea id="restoreInput" placeholder="Paste backup text here" style="width:100%;margin-top:8px;height:70px;border:1.5px solid var(--grey-border);border-radius:8px;padding:8px;font-family:monospace;font-size:11px;box-sizing:border-box;"></textarea>
+      <button class="addbtn" id="restoreBtn" style="margin-top:6px;width:100%;border-style:solid;">Restore from Backup</button>
+    </div>`;
   html += `</div>`;
   el.innerHTML = html;
+
+  const bMsg = () => document.getElementById('backupMsg');
+  const dlBtn = document.getElementById('downloadBackupBtn');
+  if (dlBtn) dlBtn.onclick = () => downloadBackup(bMsg());
+
+  const cpBtn = document.getElementById('copyBackupBtn');
+  if (cpBtn) cpBtn.onclick = async () => {
+    const m = bMsg();
+    try {
+      await navigator.clipboard.writeText(backupText());
+      m.textContent = 'Copied! Paste it somewhere safe.';
+    } catch (e) {
+      m.textContent = 'Auto-copy blocked — tap the text box above, select all, and copy manually.';
+    }
+    setTimeout(() => { if (m) m.textContent = ''; }, 4000);
+  };
+
+  const fileInput = document.getElementById('restoreFile');
+  if (fileInput) fileInput.onchange = () => {
+    const f = fileInput.files && fileInput.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { bMsg().textContent = restoreFromText(String(r.result)); fileInput.value = ''; };
+    r.onerror = () => { bMsg().textContent = 'Could not read that file.'; };
+    r.readAsText(f);
+  };
+
+  const rsBtn = document.getElementById('restoreBtn');
+  if (rsBtn) rsBtn.onclick = () => {
+    const input = document.getElementById('restoreInput').value.trim();
+    if (!input) { bMsg().textContent = 'Paste a backup first.'; return; }
+    bMsg().textContent = restoreFromText(input);
+  };
 
   document.getElementById('saveGroupBtn').onclick = () => {
     const inp = document.getElementById('groupName');
@@ -1143,6 +1190,83 @@ function renderGroups() {
 }
 
 // ---------- Tabs & init ----------
+// ---- Backup & Restore ----------------------------------------------------
+// FOUR routes on purpose, because the failure this guards against is real and
+// silent: a page with apple-mobile-web-app-capable gets a storage sandbox of
+// its own when added to the Home Screen, and DELETING THE SHORTCUT DELETES THE
+// DATA. No warning, no undo. Downloads can also misbehave inside a standalone
+// web app on iOS, so the clipboard route is kept as the one that always works.
+//
+// Backups carry an envelope {app, v, exported, data} so a future format change
+// is detectable rather than silently mis-restored. Restore still accepts the
+// older bare payload, so backups taken before this existed keep working.
+const BACKUP_APP = 'meeting-planner';
+const BACKUP_V = 1;
+
+function backupText() {
+  return JSON.stringify({
+    app: BACKUP_APP, v: BACKUP_V, exported: new Date().toISOString(),
+    data: backupData()
+  }, null, 2);
+}
+
+function backupFilename() {
+  const d = new Date(), p = n => String(n).padStart(2, '0');
+  return BACKUP_APP + '-' + d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate())
+       + '-' + p(d.getHours()) + p(d.getMinutes()) + '.json';
+}
+
+function downloadBackup(msgEl) {
+  try {
+    const blob = new Blob([backupText()], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = backupFilename();
+    document.body.appendChild(a); a.click(); a.remove();
+    // Revoked late: Safari can still be reading the blob when click() returns.
+    setTimeout(() => URL.revokeObjectURL(url), 30000);
+    if (msgEl) msgEl.textContent = 'Saved ' + backupFilename();
+  } catch (e) {
+    if (msgEl) msgEl.textContent = 'Download blocked — use Copy backup text instead.';
+  }
+}
+
+// Accepts the envelope or a legacy bare payload. Returns a message string.
+function restoreFromText(text) {
+  let parsed;
+  try { parsed = JSON.parse(text); }
+  catch (e) { return "That doesn't look like a valid backup."; }
+  if (parsed && parsed.app && parsed.data !== undefined) {
+    if (parsed.app !== BACKUP_APP) return 'That backup is from ' + parsed.app + ', not this app.';
+    return applyBackup(parsed.data);
+  }
+  return applyBackup(parsed);          // legacy, pre-envelope
+}
+
+function backupData() {
+  return { locations: locations, groups: groups,
+           active: { name: activeGroup, edited: groupEdited } };
+}
+
+function applyBackup(data) {
+  if (!data || typeof data !== 'object' || !Array.isArray(data.locations)) {
+    return "That doesn't look like a valid backup.";
+  }
+  locations = data.locations;
+  groups = (data.groups && typeof data.groups === 'object') ? data.groups : {};
+  // Only adopt the active group if it still exists in the restored set,
+  // otherwise the header would name a group you cannot load.
+  if (data.active && data.active.name && groups[data.active.name]) {
+    activeGroup = data.active.name; groupEdited = !!data.active.edited;
+  } else {
+    activeGroup = null; groupEdited = false;
+  }
+  saveLocations(); saveGroups(); saveActiveGroup();
+  renderGroups(); renderPlanner();
+  const n = Object.keys(groups).length;
+  return 'Restored ' + locations.length + ' locations and ' + n + ' group' + (n === 1 ? '' : 's') + '.';
+}
+
 function showTab(tab) {
   activeTab = tab;
   document.getElementById('view-planner').style.display = tab === 'planner' ? '' : 'none';
